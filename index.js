@@ -1,7 +1,7 @@
 const fs = require('fs');
 const http = require('http');
 const url = require('url');
-
+const replaceTemplate = require('./modules/replaceTemplate');
 //FILES
 // const textIn = fs.readFileSync('./input.txt', 'utf-8');
 // const textOut = `About avocado: ${textIn}. \nCreated on ${Date.now()}`;
@@ -27,22 +27,57 @@ const url = require('url');
 /////////////////////////////////////
 // SERVER
 
+const tempOverview = fs.readFileSync(
+  `${__dirname}/templates/template-overview.html`,
+  'utf-8'
+);
+const tempCard = fs.readFileSync(
+  `${__dirname}/templates/template-card.html`,
+  'utf-8'
+);
+const tempProduct = fs.readFileSync(
+  `${__dirname}/templates/template-product.html`,
+  'utf-8'
+);
+
 const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, 'utf-8');
 const dataObj = JSON.parse(data);
 
 const server = http.createServer((req, res) => {
-  const pathName = req.url;
+  // console.log(req.url);
+  // console.log(url.parse(req.url, true));
 
-  console.log(req.url);
+  const { query, pathname } = url.parse(req.url, true);
 
-  if (pathName === '/overview' || pathName === '/') {
-    res.end('This is the overview');
-  } else if (pathName === '/product') {
-    res.end('This is a product');
-  } else if (pathName === '/api') {
+  //Overview page
+  if (pathname === '/overview' || pathname === '/') {
+    res.writeHead(200, { 'Content-type': 'text/html' });
+
+    const cardsHtml = dataObj
+      .map((el) => replaceTemplate(tempCard, el))
+      .join('');
+
+    const output = tempOverview.replace('{%PRODUCT_CARDS%}', cardsHtml);
+    console.log(cardsHtml);
+
+    res.end(output);
+  }
+  //product
+  else if (pathname === '/product') {
+    res.writeHead(200, { 'Content-type': 'text/html' });
+    const product = dataObj[query.id];
+
+    const output = replaceTemplate(tempProduct, product);
+
+    res.end(output);
+  }
+  //api
+  else if (pathname === '/api') {
     res.writeHead(200, { 'Content-type': 'application/json' });
     res.end(data);
-  } else {
+  }
+  //Not found
+  else {
     res.writeHead(404, {
       'Content-type': 'text/html',
       'my-own-header': 'Hello world',
